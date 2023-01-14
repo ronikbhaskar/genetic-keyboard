@@ -2,6 +2,7 @@
 from random import shuffle, uniform, choice
 from keyboard import DEFAULT_DNA, DNA_LEN, Keyboard
 from fitness import scrape_wikipedia_frequency_list, FitnessFn
+from math import exp
 MUTATION_RATE = 1 / DNA_LEN
 
 def init(wiki_freq_url, dataset_length, pop_len):
@@ -15,13 +16,13 @@ def init(wiki_freq_url, dataset_length, pop_len):
 
     return pop, fitness
 
-def new_member(pop, scaled_inv_fits):
+def new_member(pop, distribution):
     p1_index = uniform(0, 1)
     p2_index = uniform(0, 1)
     p1 = None
     p2 = None
 
-    for member, inv_fit in zip(pop, scaled_inv_fits):
+    for member, inv_fit in zip(pop, distribution):
         if p1_index <= inv_fit:
             p1 = member
         else:
@@ -61,7 +62,6 @@ def new_member(pop, scaled_inv_fits):
         return p1
 
     return Keyboard(dna)
-                
 
 def next_generation(pop, pop_len, fitness):
     fits = [fitness(keyboard) for keyboard in pop]
@@ -69,10 +69,12 @@ def next_generation(pop, pop_len, fitness):
     # inv fitness to reward lower fitness (lower total distance)
     inv_fits = [1 / (fit - min_dist + 1) for fit in fits]
     sum_inv_fits = sum(inv_fits)
-    scaled_inv_fits = [inv_fit / sum_inv_fits for inv_fit in inv_fits]
-    assert 0.9999999 < sum(scaled_inv_fits) < 1.0000001
 
-    new_pop = [new_member(pop, scaled_inv_fits) for _ in range(pop_len)]
+    distribution = [inv_fit / sum_inv_fits for inv_fit in inv_fits]
+    assert 0.9999999 < sum(distribution) < 1.0000001, \
+        f"distribution sum = {sum(distribution)}"
+
+    new_pop = [new_member(pop, distribution) for _ in range(pop_len)]
     return new_pop
 
 def fittest(pop, fitness):
